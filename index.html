@@ -184,7 +184,7 @@
         @media (max-width: 900px) {
             .game-wrapper { flex-direction: column; align-items: center; }
             .chessboard { width: 94vw; height: 94vw; }
-            .history-panel { width: 94vw !important; height: 200px !important; margin-top: 10px; }
+            .side-panel { width: 94vw !important; height: auto !important; margin-top: 10px; }
         }
 
         .square {
@@ -193,6 +193,7 @@
             align-items: center;
             position: relative;
             user-select: none;
+            cursor: pointer;
         }
 
         .light { background-color: var(--light-square); }
@@ -206,10 +207,10 @@
             object-fit: contain;
             z-index: 10;
             user-select: none;
-            pointer-events: none; /* تمنع المتصفح من تعطيل السحب المخصص للّمس */
+            pointer-events: none;
         }
 
-        .history-panel {
+        .side-panel {
             background: var(--glass-bg);
             border: 1px solid var(--glass-border);
             border-radius: 16px;
@@ -218,12 +219,12 @@
             display: flex;
             flex-direction: column;
             padding: 12px;
+            gap: 10px;
         }
 
         .history-title {
             font-size: 1rem;
             color: var(--gold-premium);
-            margin-bottom: 8px;
             border-bottom: 1px solid var(--glass-border);
             padding-bottom: 5px;
             text-align: center;
@@ -238,12 +239,55 @@
             font-size: 0.9rem;
             text-align: center;
             align-items: center;
+            max-height: 150px;
+            background: rgba(0,0,0,0.2);
+            padding: 5px;
+            border-radius: 8px;
         }
+
+        /* تصميم قسم الدردشة */
+        .chat-panel {
+            flex: 1.5;
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid var(--glass-border);
+            padding-top: 10px;
+        }
+        .chat-box {
+            flex: 1;
+            background: rgba(0,0,0,0.4);
+            border-radius: 8px;
+            padding: 8px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            max-height: 120px;
+            text-align: right;
+        }
+        .chat-msg { margin-bottom: 4px; }
+        .chat-msg span { color: var(--gold-premium); font-weight: bold; }
+        
+        .emoji-bar {
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+        }
+        .emoji-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 6px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: 0.2s;
+        }
+        .emoji-btn:hover { background: rgba(255,255,255,0.15); }
 
         .action-bar {
             display: flex;
             gap: 10px;
-            margin-top: 12px;
         }
 
         .modal-overlay {
@@ -309,9 +353,27 @@
                 <div class="chessboard" id="board"></div>
             </div>
             
-            <div class="history-panel">
+            <div class="side-panel">
                 <div class="history-title">سجل النقلات الفوري</div>
                 <div class="moves-list" id="moves-container"></div>
+                
+                <div class="chat-panel">
+                    <div class="history-title">صندوق الاستفزاز والدردشة 💬</div>
+                    <div class="chat-box" id="chat-box-messages"></div>
+                    <div class="emoji-bar">
+                        <button class="emoji-btn" onclick="sendQuickChat('😎 حظاً موفقاً المرة القادمة!')">😎</button>
+                        <button class="emoji-btn" onclick="sendQuickChat('😂 حبل أفكارك اتمسح؟')">😂</button>
+                        <button class="emoji-btn" onclick="sendQuickChat('🤔 نقلة غريبة جداً!')">🤔</button>
+                        <button class="emoji-btn" onclick="sendQuickChat('🤫 صمت لو سمحت بفكّرك')">🤫</button>
+                        <button class="emoji-btn" onclick="sendQuickChat('🥱 لعب ممل.. أسرع!')">🥱</button>
+                        <button class="emoji-btn" onclick="sendQuickChat('💥 كش ملك تقترب!')">💥</button>
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" id="chatInput" placeholder="اكتب رسالة سريعة..." style="margin-bottom:0; padding:8px; font-size:0.85rem;">
+                        <button class="btn" onclick="sendCustomChat()" style="margin-top:0; width:70px; padding:8px; font-size:0.85rem;">إرسال</button>
+                    </div>
+                </div>
+
                 <div class="action-bar">
                     <button class="btn-action" onclick="triggerResign()">🏳️ انسحاب</button>
                     <button class="btn-action" onclick="triggerDrawOffer()">🤝 طلب تعادل</button>
@@ -331,7 +393,7 @@
     <div class="modal-overlay" id="drawModal">
         <div class="custom-modal">
             <h3 style="color: var(--gold-premium); margin-bottom: 15px;">عرض تعادل للصلح 🤝</h3>
-            <p style="color: #fff; margin-bottom: 20px;">الخصم يعرض عليك إنهاء الموقعة بالتعادل الودي، هل تقبل؟</p>
+            <p style="color: #fff; margin-bottom: 20px;">الخصم يعرض عليك إنهاء الموقعة بالتعادل الودي، هل تقبل?</p>
             <div style="display:flex; gap:10px;">
                 <button class="btn" style="background:#2563eb; color:#fff;" onclick="respondToDraw(true)">قبول</button>
                 <button class="btn" style="background:#dc2626; color:#fff;" onclick="respondToDraw(false)">رفض</button>
@@ -363,11 +425,11 @@
         let currentRoomCode = null;
         let playerColor = 'w'; 
         let selectedSquare = null;
-        let activeDraggedSquare = null;
 
         let whiteTime = 180;
         let blackTime = 180;
         let clockInterval = null;
+        let currentName = "لاعب";
 
         const pieceImages = {
             'wP': 'https://upload.wikimedia.org/wikipedia/commons/4/45/Chess_plt45.svg',
@@ -464,32 +526,7 @@
                         squareDiv.appendChild(img);
                     }
 
-                    // دعم اللمس والسحب فائق السرعة متوافق مع الفون والـ Touch
-                    squareDiv.addEventListener('touchstart', (e) => {
-                        if (!isOnline || game.turn() === playerColor) {
-                            activeDraggedSquare = squareName;
-                            selectedSquare = squareName;
-                            drawBoard();
-                        }
-                    });
-
-                    squareDiv.addEventListener('touchend', (e) => {
-                        // جلب المربع الحالي تحت الإصبع عند تركه
-                        const changedTouch = e.changedTouches[0];
-                        const targetEl = document.elementFromPoint(changedTouch.clientX, changedTouch.clientY);
-                        const targetSquare = targetEl ? targetEl.closest('.square') : null;
-                        
-                        if (targetSquare) {
-                            const destSquare = targetSquare.dataset.square;
-                            if (activeDraggedSquare && activeDraggedSquare !== destSquare) {
-                                executeChessMove(activeDraggedSquare, destSquare);
-                            }
-                        }
-                        activeDraggedSquare = null;
-                        selectedSquare = null;
-                    });
-
-                    // دعم الضغط العادي كخيار بديل
+                    // دعم اللمس والنقرات العادية للموبايل بسلاسة فائقة بدون تعليق
                     squareDiv.onclick = () => handleSquareClick(squareName);
                     boardElement.appendChild(squareDiv);
                 }
@@ -506,6 +543,11 @@
                     drawBoard();
                 }
             } else {
+                if (selectedSquare === square) {
+                    selectedSquare = null;
+                    drawBoard();
+                    return;
+                }
                 executeChessMove(selectedSquare, square); 
                 selectedSquare = null;
             }
@@ -530,6 +572,13 @@
                     drawBoard(); renderMovesList(); checkGameOver(); updateStatus(); updateClocksUI();
                 }
             } else {
+                // إذا ضغط على قطعة أخرى من نفس لونه بدلاً من النقل، قم بتحديدها هي
+                const clickedPiece = game.get(to);
+                if(clickedPiece && (!isOnline || clickedPiece.color === game.turn())) {
+                    selectedSquare = to;
+                } else {
+                    selectedSquare = null;
+                }
                 drawBoard();
             }
         }
@@ -559,6 +608,21 @@
             } else {
                 update(ref(db, 'rooms/' + currentRoomCode), { drawOffer: 'declined' });
             }
+        };
+
+        // دوال الدردشة الجديدة
+        window.sendQuickChat = function(msg) {
+            if (!isOnline) return alert("الدردشة متاحة في غرف الأونلاين فقط!");
+            update(ref(db, 'rooms/' + currentRoomCode), { chatMessage: `${currentName}: ${msg}_${Date.now()}` });
+        };
+
+        window.sendCustomChat = function() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            if (!isOnline) return alert("الدردشة متاحة في غرف الأونلاين فقط!");
+            update(ref(db, 'rooms/' + currentRoomCode), { chatMessage: `${currentName}: ${msg}_${Date.now()}` });
+            input.value = '';
         };
 
         function checkGameOver() {
@@ -620,7 +684,7 @@
 
         window.createNewRoom = function() {
             let selectedTime = parseInt(document.getElementById('timeControlSelect').value);
-            const pName = document.getElementById('playerName').value || "الملك الأبيض";
+            currentName = document.getElementById('playerName').value || "الملك الأبيض";
             let code = '';
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             for (let i = 0; i < 5; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -634,14 +698,15 @@
             set(roomRef, {
                 roomId: currentRoomCode, 
                 status: "waiting", 
-                playerWhite: pName, 
+                playerWhite: currentName, 
                 playerBlack: "",
                 fen: game.fen(), 
                 history: [],
                 whiteTime: whiteTime,
                 blackTime: blackTime,
                 drawOffer: "",
-                gameOverReason: ""
+                gameOverReason: "",
+                chatMessage: ""
             }).then(() => {
                 document.getElementById('lobby').innerHTML = `
                     <h3 style="color:var(--gold-premium); margin-bottom:15px;">في انتظار انضمام الخصم...</h3>
@@ -653,7 +718,7 @@
         };
 
         window.joinExistingRoom = function() {
-            const pName = document.getElementById('playerName').value || "الأسود المهاجم";
+            currentName = document.getElementById('playerName').value || "الأسود المهاجم";
             const code = document.getElementById('roomCodeInput').value.trim().toUpperCase();
             if (!code) return alert("الرجاء إدخال كود الغرفة بشكل صحيح!");
 
@@ -664,15 +729,17 @@
                 playerColor = 'b'; 
                 isOnline = true;
 
-                update(roomRef, { playerBlack: pName, status: "playing" }).then(() => {
+                update(roomRef, { playerBlack: currentName, status: "playing" }).then(() => {
                     document.getElementById('lobby').style.display = 'none';
                     document.getElementById('chess-area').style.display = 'flex';
                     document.getElementById('clocks-area').style.display = 'flex';
+                    drawBoard(); // التأكد من رسم الرقعة فوراً للاعب الثاني
                     listenToRoom(code);
                 });
             });
         };
 
+        let lastChatTimestamp = null;
         function listenToRoom(code) {
             const roomRef = ref(db, 'rooms/' + code);
             onValue(roomRef, (snapshot) => {
@@ -683,7 +750,21 @@
                     document.getElementById('lobby').style.display = 'none';
                     document.getElementById('chess-area').style.display = 'flex';
                     document.getElementById('clocks-area').style.display = 'flex';
+                    drawBoard();
                     startClockTimer();
+                }
+
+                // استقبال الشات
+                if (data.chatMessage) {
+                    const parts = data.chatMessage.split('_');
+                    const textContent = parts[0];
+                    const timestamp = parts[1];
+                    if (timestamp !== lastChatTimestamp) {
+                        lastChatTimestamp = timestamp;
+                        const chatBox = document.getElementById('chat-box-messages');
+                        chatBox.innerHTML += `<div class="chat-msg">${textContent}</div>`;
+                        chatBox.scrollTop = chatBox.scrollHeight;
+                    }
                 }
 
                 if (data.drawOffer && data.drawOffer !== playerColor && data.drawOffer !== 'declined') {
